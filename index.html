@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bavel 3D">
+<title>Bavel 3D — Precificador</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f1f5f9;--surface:#fff;--surface2:#f8fafc;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
+  --blue:#2563eb;--blue-dark:#1d4ed8;--sky:#38bdf8;
+  --green:#059669;--red:#dc2626;
+  --dark:#0f172a;--dark2:#1e293b;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Oxanium',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+input,select,button{font-family:inherit}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+
+/* ── LOADING ── */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
+#loader.hide{opacity:0;pointer-events:none}
+
+/* ── LOGO ── */
+.logo{display:flex;align-items:center;gap:8px;line-height:1}
+.logo .b1{font-size:24px;font-weight:700;letter-spacing:1px;color:var(--text)}
+.logo .b1 .v{color:var(--muted)}
+.logo .line{width:1px;height:24px;background:linear-gradient(to bottom,var(--sky),var(--blue),var(--blue-dark))}
+.logo .b2{font-size:24px;font-weight:700;letter-spacing:1px;color:var(--blue)}
+.logo.lg .b1,.logo.lg .b2{font-size:36px}
+.logo.lg .line{height:36px}
+
+/* ── HEADER ── */
+.header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.header-top{max-width:640px;margin:0 auto;padding:calc(var(--safe-top) + 14px) 16px 14px;display:flex;align-items:center;justify-content:space-between}
+.icon-btn{background:none;border:none;padding:8px;border-radius:10px;cursor:pointer;color:var(--muted);transition:background .15s}
+.icon-btn:hover{background:var(--surface2)}
+.icon-btn:active{transform:scale(.95)}
+.tabs{max-width:640px;margin:0 auto;padding:0 16px;display:flex;gap:4px}
+.tab{display:flex;align-items:center;gap:8px;padding:12px 16px;background:none;border:none;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;position:relative;transition:color .15s}
+.tab.active{color:var(--blue)}
+.tab .badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:var(--border);color:var(--muted)}
+.tab.active .badge{background:#dbeafe;color:var(--blue-dark)}
+.tab .underline{position:absolute;bottom:-1px;left:0;right:0;height:2px;background:linear-gradient(to right,var(--blue),var(--sky));border-radius:99px}
+
+/* ── MAIN ── */
+main{max-width:640px;margin:0 auto;padding:20px 16px calc(120px + var(--safe-bottom))}
+.view{display:none}
+.view.active{display:block}
+
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card.pad{padding:16px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── LABEL & INPUT ── */
+.label{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.label svg{width:14px;height:14px}
+.input-wrap{position:relative}
+.inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:15px;font-weight:500;color:var(--text);outline:none;transition:border .15s,box-shadow .15s}
+.inp:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px #dbeafe}
+.inp.has-suffix{padding-right:42px}
+.inp.has-prefix{padding-left:34px}
+.suffix{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted2);font-weight:500;pointer-events:none}
+.prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted2);font-weight:500;pointer-events:none}
+select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+.hint b{color:var(--text);font-weight:600}
+
+/* ── EXTRA COSTS ── */
+.extra-row{display:flex;gap:8px;align-items:center}
+.extra-row .desc{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:500;outline:none}
+.extra-row .desc:focus{border-color:var(--blue);background:#fff}
+.extra-row .val-wrap{position:relative;width:110px}
+.extra-row .val{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 10px 9px 32px;font-size:14px;font-weight:500;text-align:right;outline:none}
+.extra-row .val:focus{border-color:var(--blue);background:#fff}
+.extra-row .val-prefix{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted2)}
+.del-btn{background:none;border:none;padding:8px;border-radius:8px;cursor:pointer;color:var(--muted2);transition:all .15s}
+.del-btn:hover{color:var(--red);background:#fef2f2}
+.link-btn{display:flex;align-items:center;gap:4px;background:none;border:none;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer}
+.row-between{display:flex;align-items:center;justify-content:space-between}
+.muted-italic{font-size:12px;color:var(--muted2);font-style:italic}
+
+/* ── MARGIN SLIDER ── */
+.margin-val{font-size:20px;font-weight:700;color:var(--blue)}
+input[type=range]{width:100%;height:6px;border-radius:99px;background:var(--border);outline:none;-webkit-appearance:none;cursor:pointer;margin-top:4px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--blue);cursor:pointer;box-shadow:0 1px 4px rgba(37,99,235,.5)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-radius:50%;background:var(--blue);cursor:pointer}
+.range-marks{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);font-weight:500;margin-top:4px}
+
+/* ── RESULT ── */
+.result-wrap{position:relative}
+.result-glow{position:absolute;inset:-2px;background:linear-gradient(135deg,rgba(37,99,235,.3),rgba(56,189,248,.2),rgba(29,78,216,.3));border-radius:18px;filter:blur(8px)}
+.result{position:relative;background:linear-gradient(135deg,var(--dark),var(--dark2));border-radius:16px;padding:20px;color:#fff}
+.result-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.result-head .ttl{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2)}
+.result-head .meta{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted2)}
+.result-head .meta svg{width:12px;height:12px}
+.res-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.res-row .lbl{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted2)}
+.res-row .lbl svg{width:14px;height:14px}
+.res-row .amt{font-size:14px;font-weight:600;color:#e2e8f0}
+.res-divider{height:1px;background:linear-gradient(to right,transparent,#334155,transparent);margin:14px 0}
+.res-total{display:flex;align-items:flex-end;justify-content:space-between}
+.res-total .lbl{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted2)}
+.res-total .amt{font-size:24px;font-weight:700}
+.res-sell{margin-top:16px;padding:14px;background:linear-gradient(135deg,rgba(37,99,235,.25),rgba(56,189,248,.12));border:1px solid rgba(56,189,248,.3);border-radius:12px}
+.res-sell .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.res-sell .top .lbl{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--sky)}
+.res-sell .top .profit{font-size:12px;font-weight:600;color:#34d399}
+.res-sell .price{font-size:30px;font-weight:700;letter-spacing:-.5px}
+
+/* ── BUTTONS ── */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-secondary{background:var(--border);color:var(--text)}
+.btn-secondary:hover{background:var(--border2)}
+
+/* ── HISTORY ── */
+.empty{text-align:center;padding:40px 20px}
+.empty .ico{display:inline-flex;padding:14px;background:var(--surface2);border-radius:50%;margin-bottom:12px;color:var(--muted2)}
+.empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.empty p{font-size:14px;color:var(--muted);margin-bottom:16px}
+.hist-card{padding:16px;margin-bottom:12px}
+.hist-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.hist-head h3{font-size:16px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-head .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.hist-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.mini-stat{background:var(--surface2);border-radius:10px;padding:8px 4px;text-align:center}
+.mini-stat .lbl{font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.mini-stat .val{font-size:14px;font-weight:700;color:var(--text);margin-top:2px}
+.hist-prices{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface2);border-radius:12px}
+.hist-prices .lbl{font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.hist-prices .c-lbl{color:var(--muted)}
+.hist-prices .s-lbl{color:var(--blue)}
+.hist-prices .amt{font-weight:700;margin-top:1px}
+.hist-prices .c-amt{color:var(--text)}
+.hist-prices .s-amt{color:var(--blue-dark)}
+.reload-btn{width:100%;margin-top:12px;padding:9px;background:none;border:none;font-size:14px;font-weight:600;color:var(--blue);border-radius:10px;cursor:pointer;transition:background .15s}
+.reload-btn:hover{background:#eff6ff}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.overlay.center{align-items:center;padding:16px}
+.modal{background:#fff;width:100%;max-width:520px;border-radius:20px 20px 0 0;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+.overlay.center .modal{border-radius:20px;max-width:400px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-head h2{font-size:18px;font-weight:700}
+.modal-tabs{display:flex;border-bottom:1px solid var(--border)}
+.modal-tab{flex:1;padding:13px;background:none;border:none;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.modal-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.modal-body{flex:1;overflow-y:auto;padding:16px 20px}
+.modal-foot{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px}
+.modal-foot .btn{flex:1}
+.fil-edit{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
+.fil-edit-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.fil-edit-head .lbl{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.fil-edit .inp,.fil-edit .desc{background:#fff}
+.add-fil{width:100%;padding:13px;border:2px dashed var(--border2);border-radius:12px;background:none;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.add-fil:hover{border-color:var(--blue);color:var(--blue);background:#eff6ff}
+.preview-box{margin-top:16px;padding:12px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;justify-content:between}
+.preview-box .pb-lbl{font-size:12px;font-weight:600;color:var(--muted);flex:1}
+.preview-box .pb-amt{font-weight:700;color:var(--blue)}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);z-index:200;display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-size:14px;font-weight:500;color:#fff;opacity:0;transition:all .3s}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.success{background:var(--green)}
+#toast.info{background:var(--dark)}
+#toast.error{background:var(--red)}
+#toast svg{width:16px;height:16px}
+
+/* ── SPINNER ── */
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle}
+.sync-dot.syncing{background:var(--sky);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.4}}
+.sync-status{font-size:11px;color:var(--muted);font-weight:500}
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <span class="b1">Ba<span class="v">V</span>el</span>
+      <span class="line"></span>
+      <span class="b2">3D</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">na nuvem</span></span>
+      <button class="icon-btn" onclick="openSettings()" aria-label="Configurações">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-calc" onclick="switchTab('calc')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="8" y2="10"></line><line x1="12" y1="10" x2="12" y2="10"></line><line x1="16" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="8" y2="14"></line><line x1="12" y1="14" x2="12" y2="14"></line></svg>
+      Calcular<span class="underline"></span>
+    </button>
+    <button class="tab" id="tab-history" onclick="switchTab('history')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg>
+      Histórico<span class="badge" id="histBadge">0</span>
+    </button>
+  </div>
+</div>
+
+<main>
+  <!-- CALC VIEW -->
+  <div class="view active" id="view-calc">
+    <div class="stack">
+      <div class="card pad">
+        <div class="label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3.27 6.96 12 12.01l8.73-5.05"></path><path d="M12 22.08V12"></path></svg>
+          Filamento
+        </div>
+        <div class="input-wrap">
+          <select class="inp" id="filamentSelect" onchange="recalc()"></select>
+        </div>
+        <div class="hint">Custo por grama: <b id="costPerGram">R$ 0,00</b></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card pad">
+          <div class="label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" style="display:none"></path><path d="M6.5 6.5 17.5 17.5"></path><path d="M12 2v2"></path><path d="m4.93 4.93 1.41 1.41"></path><circle cx="12" cy="13" r="8" style="display:none"></circle></svg>
+            Peso da peça
+          </div>
+          <div class="input-wrap">
+            <input class="inp has-suffix" type="number" inputmode="decimal" id="pieceWeight" placeholder="0" oninput="recalc()">
+            <span class="suffix">g</span>
+          </div>
+        </div>
+        <div class="card pad">
+          <div class="label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Tempo
+          </div>
+          <div class="grid2">
+            <div class="input-wrap">
+              <input class="inp has-suffix" type="number" inputmode="decimal" id="hours" placeholder="0" oninput="recalc()">
+              <span class="suffix">h</span>
+            </div>
+            <div class="input-wrap">
+              <input class="inp has-suffix" type="number" inputmode="decimal" id="minutes" placeholder="0" oninput="recalc()">
+              <span class="suffix">min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="row-between" style="margin-bottom:12px">
+          <div class="label" style="margin:0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            Outros custos
+          </div>
+          <button class="link-btn" onclick="addExtraCost()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Adicionar
+          </button>
+        </div>
+        <div id="extraCostsList"></div>
+        <p class="muted-italic" id="extraEmpty">Argolas, embalagem, pintura, etiqueta, etc.</p>
+      </div>
+
+      <div class="card pad">
+        <div class="row-between" style="margin-bottom:8px">
+          <div class="label" style="margin:0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+            Margem de lucro
+          </div>
+          <span class="margin-val"><span id="marginVal">70</span>%</span>
+        </div>
+        <input type="range" id="marginSlider" min="0" max="90" step="5" value="70" oninput="recalc()">
+        <div class="range-marks"><span>0%</span><span>45%</span><span>90%</span></div>
+      </div>
+
+      <div class="result-wrap">
+        <div class="result-glow"></div>
+        <div class="result">
+          <div class="result-head">
+            <span class="ttl">Resultado</span>
+            <span class="meta">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span id="metaInfo">0.00h • 0.0g</span>
+            </span>
+          </div>
+          <div class="res-row">
+            <span class="lbl"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Material</span>
+            <span class="amt" id="resMaterial">R$ 0,00</span>
+          </div>
+          <div class="res-row">
+            <span class="lbl"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Energia</span>
+            <span class="amt" id="resEnergy">R$ 0,00</span>
+          </div>
+          <div class="res-row" id="resExtrasRow" style="display:none">
+            <span class="lbl"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path></svg>Outros</span>
+            <span class="amt" id="resExtras">R$ 0,00</span>
+          </div>
+          <div class="res-divider"></div>
+          <div class="res-total">
+            <span class="lbl">Custo total</span>
+            <span class="amt" id="resTotal">R$ 0,00</span>
+          </div>
+          <div class="res-sell">
+            <div class="top">
+              <span class="lbl">Venda sugerida</span>
+              <span class="profit">+ <span id="resProfit">R$ 0,00</span></span>
+            </div>
+            <div class="price" id="resSell">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="resetCalc()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          Limpar
+        </button>
+        <button class="btn btn-primary" onclick="openSaveModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="view" id="view-history"></div>
+</main>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settingsModal" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Configurações</h2>
+      <button class="icon-btn" onclick="closeSettings()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="mtab-config" onclick="switchModalTab('config')">Parâmetros</button>
+      <button class="modal-tab" id="mtab-filaments" onclick="switchModalTab('filaments')">Filamentos</button>
+    </div>
+    <div class="modal-body">
+      <div id="mview-config" class="stack">
+        <div>
+          <div class="label">Potência da impressora</div>
+          <div class="input-wrap"><input class="inp has-suffix" type="number" inputmode="decimal" id="cfgWatts"><span class="suffix">W</span></div>
+        </div>
+        <div>
+          <div class="label">Tarifa de energia</div>
+          <div class="input-wrap"><input class="inp has-prefix has-suffix" type="number" inputmode="decimal" id="cfgTariff"><span class="prefix">R$</span><span class="suffix">/kWh</span></div>
+        </div>
+        <div>
+          <div class="label">Desperdício de filamento</div>
+          <div class="input-wrap"><input class="inp has-suffix" type="number" inputmode="decimal" id="cfgWaste"><span class="suffix">%</span></div>
+          <p class="hint">Compensa restos, escoramentos e refações.</p>
+        </div>
+        <div>
+          <div class="label">Margem padrão</div>
+          <div class="input-wrap"><input class="inp has-suffix" type="number" inputmode="decimal" id="cfgMargin"><span class="suffix">%</span></div>
+        </div>
+      </div>
+      <div id="mview-filaments" style="display:none">
+        <div id="filamentsEditList"></div>
+        <button class="add-fil" onclick="addFilamentEdit()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Novo filamento
+        </button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeSettings()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSettings()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE MODAL -->
+<div class="overlay center" id="saveModal" style="display:none" onclick="if(event.target===this)closeSaveModal()">
+  <div class="modal">
+    <div style="padding:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+        <h2 style="font-size:16px;font-weight:700">Nomear cálculo</h2>
+      </div>
+      <p class="hint" style="margin-bottom:14px">Como identificar este produto no histórico?</p>
+      <div class="input-wrap"><input class="inp" type="text" id="saveName" placeholder="Ex.: Chaveiro coração - aberto"></div>
+      <div class="preview-box">
+        <span class="pb-lbl">Venda sugerida</span>
+        <span class="pb-amt" id="savePreview">R$ 0,00</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeSaveModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCalc()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+// SUPABASE
+// ════════════════════════════════════════════
+const SUPABASE_URL = 'https://ohabzdnwmsqxubafbefx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Z5Rk75EM04UIDSrfJg8kDQ_XP8aluEg';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let config = { printer_watts:130, energy_tariff:0.885882, waste_percent:15, default_margin:70 };
+let filaments = [];
+let history = [];
+let extraCosts = [];
+let editFilaments = [];
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+const brl = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
+const numv = v => { if(v===''||v==null) return 0; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; };
+const uid = () => Math.random().toString(36).slice(2,10);
+const $ = id => document.getElementById(id);
+
+function setSync(state){
+  const dot=$('syncDot'), txt=$('syncText');
+  if(state==='syncing'){dot.className='sync-dot syncing';txt.textContent='salvando...';}
+  else if(state==='error'){dot.style.background='var(--red)';txt.textContent='erro de conexão';}
+  else{dot.className='sync-dot';txt.textContent='na nuvem';}
+}
+
+let toastTimer;
+function toast(msg,type='info'){
+  const t=$('toast');
+  const icons={success:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',info:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',error:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'};
+  t.className=type+' show';
+  t.innerHTML=icons[type]+'<span>'+msg+'</span>';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ════════════════════════════════════════════
+// LOAD DATA
+// ════════════════════════════════════════════
+async function loadAll(){
+  try{
+    const [cfgRes, filRes, histRes] = await Promise.all([
+      sb.from('config').select('*').eq('id',1).single(),
+      sb.from('filaments').select('*').order('created_at',{ascending:true}),
+      sb.from('history').select('*').order('created_at',{ascending:false})
+    ]);
+    if(cfgRes.data) config = cfgRes.data;
+    if(filRes.data) filaments = filRes.data;
+    if(histRes.data) history = histRes.data;
+    $('marginSlider').value = config.default_margin;
+    renderFilamentSelect();
+    renderHistory();
+    recalc();
+    $('loader').classList.add('hide');
+  }catch(e){
+    console.error(e);
+    setSync('error');
+    $('loader').classList.add('hide');
+    toast('Erro ao conectar. Verifique a internet.','error');
+  }
+}
+
+// ════════════════════════════════════════════
+// CALC
+// ════════════════════════════════════════════
+function recalc(){
+  const fid = $('filamentSelect').value;
+  const f = filaments.find(x=>String(x.id)===String(fid)) || filaments[0];
+  const totalHours = numv($('hours').value) + numv($('minutes').value)/60;
+  const weightG = numv($('pieceWeight').value);
+  const waste = numv(config.waste_percent)/100;
+  const filamentUsed = weightG*(1+waste);
+  const pricePerKg = f ? numv(f.price_per_kg) : 0;
+
+  const material = (filamentUsed/1000)*pricePerKg;
+  const energy = (numv(config.printer_watts)/1000)*totalHours*numv(config.energy_tariff);
+  const extras = extraCosts.reduce((s,e)=>s+numv(e.value),0);
+  const total = material+energy+extras;
+  const m = numv($('marginSlider').value)/100;
+  const sell = m<1 ? total/(1-m) : total;
+  const profit = sell-total;
+
+  $('marginVal').textContent = numv($('marginSlider').value).toFixed(0);
+  $('costPerGram').textContent = brl(pricePerKg/1000);
+  $('metaInfo').textContent = totalHours.toFixed(2)+'h • '+filamentUsed.toFixed(1)+'g';
+  $('resMaterial').textContent = brl(material);
+  $('resEnergy').textContent = brl(energy);
+  $('resExtras').textContent = brl(extras);
+  $('resExtrasRow').style.display = extras>0 ? 'flex' : 'none';
+  $('resTotal').textContent = brl(total);
+  $('resSell').textContent = brl(sell);
+  $('resProfit').textContent = brl(profit);
+  $('savePreview').textContent = brl(sell);
+
+  window._calc = {material,energy,extras,total,sell,profit,filament:f,weightG,
+    hours:numv($('hours').value),minutes:numv($('minutes').value),margin:numv($('marginSlider').value)};
+}
+
+function renderFilamentSelect(){
+  const sel = $('filamentSelect');
+  const cur = sel.value;
+  sel.innerHTML = filaments.map(f=>
+    `<option value="${f.id}">${f.name} — ${f.color} (${brl(numv(f.price_per_kg))}/kg)</option>`
+  ).join('');
+  if(cur) sel.value = cur;
+}
+
+// ── EXTRA COSTS ──
+function renderExtraCosts(){
+  const list = $('extraCostsList');
+  $('extraEmpty').style.display = extraCosts.length ? 'none' : 'block';
+  list.innerHTML = extraCosts.map(e=>`
+    <div class="extra-row" style="margin-bottom:8px">
+      <input class="desc" placeholder="Descrição" value="${(e.name||'').replace(/"/g,'&quot;')}" oninput="updateExtra('${e.id}','name',this.value)">
+      <div class="val-wrap">
+        <span class="val-prefix">R$</span>
+        <input class="val" type="number" inputmode="decimal" placeholder="0,00" value="${e.value}" oninput="updateExtra('${e.id}','value',this.value)">
+      </div>
+      <button class="del-btn" onclick="removeExtra('${e.id}')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    </div>`).join('');
+}
+function addExtraCost(){ extraCosts.push({id:uid(),name:'',value:''}); renderExtraCosts(); recalc(); }
+function updateExtra(id,field,val){ const e=extraCosts.find(x=>x.id===id); if(e){e[field]=val; recalc();} }
+function removeExtra(id){ extraCosts=extraCosts.filter(x=>x.id!==id); renderExtraCosts(); recalc(); }
+
+function resetCalc(){
+  $('pieceWeight').value='';$('hours').value='';$('minutes').value='';
+  extraCosts=[]; renderExtraCosts();
+  $('marginSlider').value=config.default_margin;
+  recalc();
+  toast('Cálculo reiniciado');
+}
+
+// ════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════
+function switchTab(tab){
+  $('tab-calc').classList.toggle('active',tab==='calc');
+  $('tab-history').classList.toggle('active',tab==='history');
+  $('view-calc').classList.toggle('active',tab==='calc');
+  $('view-history').classList.toggle('active',tab==='history');
+  if(tab==='calc'){ $('tab-calc').innerHTML=calcTabInner; }
+  else{ $('tab-calc').innerHTML=calcTabInnerNoLine; }
+}
+const calcTabInner = $('tab-calc').innerHTML;
+const calcTabInnerNoLine = calcTabInner.replace('<span class="underline"></span>','');
+
+// ════════════════════════════════════════════
+// HISTORY
+// ════════════════════════════════════════════
+function renderHistory(){
+  $('histBadge').textContent = history.length;
+  const v = $('view-history');
+  if(!history.length){
+    v.innerHTML=`<div class="card empty">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg></div>
+      <h3>Nenhum cálculo salvo</h3>
+      <p>Faça um cálculo e salve para ver aqui.</p>
+      <button class="btn btn-primary" style="display:inline-flex" onclick="switchTab('calc')">Ir para Calculadora</button>
+    </div>`;
+    return;
+  }
+  v.innerHTML = history.map(h=>{
+    const d = new Date(h.created_at);
+    const dstr = d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+    return `<div class="card hist-card">
+      <div class="hist-head">
+        <div style="flex:1;min-width:0">
+          <h3>${(h.product_name||'Sem nome')}</h3>
+          <div class="sub">${dstr} • ${h.filament_name||''}</div>
+        </div>
+        <button class="del-btn" onclick="deleteHistory('${h.id}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+      <div class="hist-stats">
+        <div class="mini-stat"><div class="lbl">Peso</div><div class="val">${numv(h.piece_weight)}g</div></div>
+        <div class="mini-stat"><div class="lbl">Tempo</div><div class="val">${numv(h.hours)}h${numv(h.minutes)?' '+numv(h.minutes)+'m':''}</div></div>
+        <div class="mini-stat"><div class="lbl">Margem</div><div class="val">${numv(h.margin)}%</div></div>
+      </div>
+      <div class="hist-prices">
+        <div><div class="lbl c-lbl">Custo</div><div class="amt c-amt">${brl(numv(h.total_cost))}</div></div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        <div style="text-align:right"><div class="lbl s-lbl">Sugerido</div><div class="amt s-amt">${brl(numv(h.suggested_price))}</div></div>
+      </div>
+      <button class="reload-btn" onclick="reloadCalc('${h.id}')">Recarregar cálculo</button>
+    </div>`;
+  }).join('');
+}
+
+function reloadCalc(id){
+  const h = history.find(x=>String(x.id)===String(id));
+  if(!h) return;
+  const fil = filaments.find(f=>(f.name+' '+f.color)===h.filament_name);
+  if(fil) $('filamentSelect').value = fil.id;
+  $('pieceWeight').value = numv(h.piece_weight)||'';
+  $('hours').value = numv(h.hours)||'';
+  $('minutes').value = numv(h.minutes)||'';
+  extraCosts = (h.extra_costs||[]).map(e=>({id:uid(),name:e.name,value:e.value}));
+  renderExtraCosts();
+  $('marginSlider').value = numv(h.margin);
+  recalc();
+  switchTab('calc');
+  toast('"'+(h.product_name||'Sem nome')+'" carregado');
+}
+
+async function deleteHistory(id){
+  setSync('syncing');
+  const { error } = await sb.from('history').delete().eq('id',id);
+  if(error){ setSync('error'); toast('Erro ao remover','error'); return; }
+  history = history.filter(h=>String(h.id)!==String(id));
+  renderHistory();
+  setSync('ok');
+  toast('Item removido');
+}
+
+// ════════════════════════════════════════════
+// SAVE CALC
+// ════════════════════════════════════════════
+function openSaveModal(){ $('saveName').value=''; $('saveModal').style.display='flex'; setTimeout(()=>$('saveName').focus(),100); }
+function closeSaveModal(){ $('saveModal').style.display='none'; }
+
+async function saveCalc(){
+  const c = window._calc;
+  if(!c){ return; }
+  const name = $('saveName').value.trim() || 'Sem nome';
+  const entry = {
+    product_name: name,
+    filament_name: c.filament ? (c.filament.name+' '+c.filament.color) : '',
+    piece_weight: c.weightG,
+    hours: c.hours,
+    minutes: c.minutes,
+    extra_costs: extraCosts.map(e=>({name:e.name,value:numv(e.value)})),
+    margin: c.margin,
+    material_cost: c.material,
+    energy_cost: c.energy,
+    extras_cost: c.extras,
+    total_cost: c.total,
+    suggested_price: c.sell,
+    profit: c.profit
+  };
+  setSync('syncing');
+  const { data, error } = await sb.from('history').insert(entry).select().single();
+  if(error){ setSync('error'); toast('Erro ao salvar','error'); console.error(error); return; }
+  history.unshift(data);
+  renderHistory();
+  closeSaveModal();
+  setSync('ok');
+  toast('Cálculo salvo na nuvem','success');
+}
+
+// ════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════
+function openSettings(){
+  $('cfgWatts').value = config.printer_watts;
+  $('cfgTariff').value = config.energy_tariff;
+  $('cfgWaste').value = config.waste_percent;
+  $('cfgMargin').value = config.default_margin;
+  editFilaments = filaments.map(f=>({...f}));
+  renderFilamentsEdit();
+  switchModalTab('config');
+  $('settingsModal').style.display='flex';
+}
+function closeSettings(){ $('settingsModal').style.display='none'; }
+function switchModalTab(t){
+  $('mtab-config').classList.toggle('active',t==='config');
+  $('mtab-filaments').classList.toggle('active',t==='filaments');
+  $('mview-config').style.display = t==='config'?'flex':'none';
+  $('mview-filaments').style.display = t==='filaments'?'block':'none';
+}
+
+function renderFilamentsEdit(){
+  $('filamentsEditList').innerHTML = editFilaments.map((f,i)=>`
+    <div class="fil-edit">
+      <div class="fil-edit-head">
+        <span class="lbl">Filamento</span>
+        <button class="del-btn" onclick="removeFilamentEdit(${i})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+      <div class="stack" style="gap:8px">
+        <input class="inp" placeholder="Marca / Linha" value="${(f.name||'').replace(/"/g,'&quot;')}" oninput="editFil(${i},'name',this.value)">
+        <div class="grid2">
+          <input class="inp" placeholder="Cor" value="${(f.color||'').replace(/"/g,'&quot;')}" oninput="editFil(${i},'color',this.value)">
+          <select class="inp" onchange="editFil(${i},'type',this.value)">
+            ${['PLA','PETG','ABS','TPU','ASA'].map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-wrap">
+          <span class="prefix">R$</span>
+          <input class="inp has-prefix has-suffix" type="number" inputmode="decimal" placeholder="0,00" value="${f.price_per_kg}" oninput="editFil(${i},'price_per_kg',this.value)">
+          <span class="suffix">/kg</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function editFil(i,field,val){ editFilaments[i][field]=val; }
+function addFilamentEdit(){ editFilaments.push({id:'new_'+uid(),name:'',color:'',type:'PLA',price_per_kg:''}); renderFilamentsEdit(); }
+function removeFilamentEdit(i){ editFilaments.splice(i,1); renderFilamentsEdit(); }
+
+async function saveSettings(){
+  setSync('syncing');
+  try{
+    // Config
+    const newCfg = {
+      printer_watts: numv($('cfgWatts').value),
+      energy_tariff: numv($('cfgTariff').value),
+      waste_percent: numv($('cfgWaste').value),
+      default_margin: numv($('cfgMargin').value),
+      updated_at: new Date().toISOString()
+    };
+    await sb.from('config').update(newCfg).eq('id',1);
+    config = {...config,...newCfg};
+
+    // Filaments — figure out adds, updates, deletes
+    const valid = editFilaments.filter(f=>(f.name||'').trim() && numv(f.price_per_kg)>0);
+    const existingIds = filaments.map(f=>String(f.id));
+    const keptIds = valid.filter(f=>!String(f.id).startsWith('new_')).map(f=>String(f.id));
+
+    // deletes
+    const toDelete = existingIds.filter(id=>!keptIds.includes(id));
+    for(const id of toDelete){ await sb.from('filaments').delete().eq('id',id); }
+
+    // updates + inserts
+    for(const f of valid){
+      const payload = { name:f.name.trim(), color:(f.color||'').trim(), type:f.type, price_per_kg:numv(f.price_per_kg) };
+      if(String(f.id).startsWith('new_')){
+        await sb.from('filaments').insert(payload);
+      }else{
+        await sb.from('filaments').update(payload).eq('id',f.id);
+      }
+    }
+
+    // reload filaments
+    const { data } = await sb.from('filaments').select('*').order('created_at',{ascending:true});
+    if(data) filaments = data;
+    renderFilamentSelect();
+    $('marginSlider').value = config.default_margin;
+    recalc();
+    closeSettings();
+    setSync('ok');
+    toast('Configurações salvas','success');
+  }catch(e){
+    console.error(e); setSync('error'); toast('Erro ao salvar','error');
+  }
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+renderExtraCosts();
+loadAll();
+</script>
+</body>
+</html>
