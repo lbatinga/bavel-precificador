@@ -72,6 +72,10 @@ main{max-width:640px;margin:0 auto;padding:20px 16px calc(120px + var(--safe-bot
 .card.pad{padding:16px}
 .stack{display:flex;flex-direction:column;gap:16px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.time-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.time-field{display:flex;align-items:center;gap:8px}
+.time-inp{text-align:center;min-width:0}
+.time-unit{font-size:14px;color:var(--muted);font-weight:600;white-space:nowrap}
 
 /* ── LABEL & INPUT ── */
 .label{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
@@ -248,31 +252,30 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-ra
         <div class="hint">Custo por grama: <b id="costPerGram">R$ 0,00</b></div>
       </div>
 
-      <div class="grid2">
-        <div class="card pad">
-          <div class="label">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" style="display:none"></path><path d="M6.5 6.5 17.5 17.5"></path><path d="M12 2v2"></path><path d="m4.93 4.93 1.41 1.41"></path><circle cx="12" cy="13" r="8" style="display:none"></circle></svg>
-            Peso da peça
-          </div>
-          <div class="input-wrap">
-            <input class="inp has-suffix" type="number" inputmode="decimal" id="pieceWeight" placeholder="0" oninput="recalc()">
-            <span class="suffix">g</span>
-          </div>
+      <div class="card pad">
+        <div class="label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7l8 4 8-4-8-4Z" style="display:none"></path><circle cx="12" cy="5" r="2"></circle><path d="M12 7v3"></path><path d="M5 21h14"></path><path d="m7 21-3-9h16l-3 9"></path><path d="M4 12h16"></path></svg>
+          Peso da peça
         </div>
-        <div class="card pad">
-          <div class="label">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            Tempo
+        <div class="input-wrap">
+          <input class="inp has-suffix" type="number" inputmode="decimal" id="pieceWeight" placeholder="0" oninput="recalc()">
+          <span class="suffix">g</span>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Tempo de impressão
+        </div>
+        <div class="time-grid">
+          <div class="time-field">
+            <input class="inp time-inp" type="number" inputmode="numeric" id="hours" placeholder="0" oninput="onHoursInput(this)">
+            <span class="time-unit">horas</span>
           </div>
-          <div class="grid2">
-            <div class="input-wrap">
-              <input class="inp has-suffix" type="number" inputmode="decimal" id="hours" placeholder="0" oninput="recalc()">
-              <span class="suffix">h</span>
-            </div>
-            <div class="input-wrap">
-              <input class="inp has-suffix" type="number" inputmode="decimal" id="minutes" placeholder="0" oninput="recalc()">
-              <span class="suffix">min</span>
-            </div>
+          <div class="time-field">
+            <input class="inp time-inp" type="number" inputmode="numeric" id="minutes" placeholder="0" oninput="onMinutesInput(this)">
+            <span class="time-unit">min</span>
           </div>
         </div>
       </div>
@@ -568,6 +571,21 @@ function renderExtraCosts(){
 function addExtraCost(){ extraCosts.push({id:uid(),name:'',value:''}); renderExtraCosts(); recalc(); }
 function updateExtra(id,field,val){ const e=extraCosts.find(x=>x.id===id); if(e){e[field]=val; recalc();} }
 function removeExtra(id){ extraCosts=extraCosts.filter(x=>x.id!==id); renderExtraCosts(); recalc(); }
+
+// ── TIME INPUTS (clamp) ──
+function onHoursInput(el){
+  let v = el.value.replace(/[^0-9]/g,'');
+  if(v.length>3) v = v.slice(0,3);   // até 999h
+  el.value = v;
+  recalc();
+}
+function onMinutesInput(el){
+  let v = el.value.replace(/[^0-9]/g,'');
+  if(v.length>2) v = v.slice(0,2);   // máximo 2 dígitos
+  if(parseInt(v,10) > 59) v = '59';  // minutos não passam de 59
+  el.value = v;
+  recalc();
+}
 
 function resetCalc(){
   $('pieceWeight').value='';$('hours').value='';$('minutes').value='';
